@@ -1,0 +1,19 @@
+from pathlib import Path
+from app.director import demo_scenes
+from app.models import ProjectRequest
+from app.render import srt_time, write_srt
+
+
+def test_demo_scene_schema(tmp_path: Path):
+    req = ProjectRequest(topic="Máy bán hàng tự động", target_seconds=30)
+    scenes = demo_scenes(req)
+    assert scenes and scenes[0].id == 1
+    assert "no text" in scenes[0].visual_prompt
+    path = tmp_path / "x.srt"
+    write_srt(scenes, path)
+    assert "-->" in path.read_text(encoding="utf-8")
+
+
+def test_srt_time():
+    assert srt_time(65.123) == "00:01:05,123"
+
