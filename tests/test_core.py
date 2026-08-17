@@ -1,7 +1,8 @@
 from pathlib import Path
 from app.director import demo_scenes
-from app.models import ProjectRequest
+from app.models import Project, ProjectRequest
 from app.render import srt_time, write_srt
+from app.store import ProjectStore
 
 
 def test_demo_scene_schema(tmp_path: Path):
@@ -17,3 +18,13 @@ def test_demo_scene_schema(tmp_path: Path):
 def test_srt_time():
     assert srt_time(65.123) == "00:01:05,123"
 
+
+def test_store_adds_created_at_to_legacy_project(tmp_path: Path):
+    store = ProjectStore(tmp_path)
+    project = Project(id="legacy", status="completed", request=ProjectRequest(topic="Dự án cũ"))
+    store.save(project)
+
+    loaded = store.get("legacy")
+
+    assert loaded is not None
+    assert loaded.created_at is not None

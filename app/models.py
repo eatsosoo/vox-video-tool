@@ -1,4 +1,5 @@
 from enum import Enum
+from datetime import datetime
 from pydantic import BaseModel, Field
 
 
@@ -31,6 +32,7 @@ class ProjectRequest(BaseModel):
 class Project(BaseModel):
     id: str
     status: str
+    created_at: datetime | None = None
     progress: int = 0
     request: ProjectRequest
     scenes: list[Scene] = Field(default_factory=list)

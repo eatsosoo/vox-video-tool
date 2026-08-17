@@ -1,5 +1,6 @@
 import asyncio
 import uuid
+from datetime import datetime, timezone
 from pathlib import Path
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse
@@ -28,13 +29,19 @@ async def process(project_id: str):
         project.output_url = f"/api/projects/{project.id}/video"
         store.save(project)
     except Exception as exc:
-        project.status, project.error = "failed", str(exc)
+        detail = str(exc).strip() or f"{type(exc).__name__}: lỗi không có thông báo"
+        project.status, project.error = "failed", detail
         store.save(project)
 
 
 @app.post("/api/projects", response_model=Project, status_code=202)
 async def create_project(req: ProjectRequest):
-    project = Project(id=uuid.uuid4().hex[:12], status="queued", request=req)
+    project = Project(
+        id=uuid.uuid4().hex[:12],
+        status="queued",
+        created_at=datetime.now(timezone.utc),
+        request=req,
+    )
     store.save(project)
     asyncio.create_task(process(project.id))
     return project
@@ -63,4 +70,3 @@ def get_video(project_id: str):
 
 static = Path(__file__).parent / "static"
 app.mount("/", StaticFiles(directory=static, html=True), name="static")
-

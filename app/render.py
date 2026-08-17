@@ -1,5 +1,6 @@
 import asyncio
 import shutil
+import subprocess
 from pathlib import Path
 from app.config import settings
 from app.models import Project, Scene
@@ -23,11 +24,18 @@ def write_srt(scenes: list[Scene], path: Path) -> None:
     path.write_text("\n".join(chunks), encoding="utf-8")
 
 
-async def run(*args: str) -> None:
-    proc = await asyncio.create_subprocess_exec(*args, stdout=asyncio.subprocess.DEVNULL, stderr=asyncio.subprocess.PIPE)
-    _, err = await proc.communicate()
+def run_sync(args: tuple[str, ...]) -> None:
+    proc = subprocess.run(args, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, check=False)
     if proc.returncode:
-        raise RuntimeError(err.decode(errors="replace")[-2000:])
+        detail = proc.stderr.decode(errors="replace").strip()[-2000:]
+        raise RuntimeError(detail or f"FFmpeg kết thúc với mã lỗi {proc.returncode}")
+
+
+async def run(*args: str) -> None:
+    # Uvicorn can use a SelectorEventLoop on Windows, where asyncio subprocesses
+    # raise NotImplementedError. A worker thread keeps the API responsive and is
+    # portable across Windows, macOS and Linux.
+    await asyncio.to_thread(run_sync, args)
 
 
 async def render_demo(project: Project, folder: Path) -> Path:
