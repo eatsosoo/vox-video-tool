@@ -21,10 +21,15 @@ async def process(project_id: str):
         project.status, project.progress = "planning", 15
         store.save(project)
         project.scenes = await create_scenes(project.request)
-        project.status, project.progress = "rendering", 55
+        project.status, project.progress = "planned", 20
         store.save(project)
         folder = settings.data_dir / "projects" / project.id
-        output = await render(project, folder)
+
+        async def update_progress(status: str, progress: int):
+            project.status, project.progress = status, progress
+            store.save(project)
+
+        output = await render(project, folder, update_progress)
         project.status, project.progress = "completed", 100
         project.output_url = f"/api/projects/{project.id}/video"
         store.save(project)
@@ -36,6 +41,9 @@ async def process(project_id: str):
 
 @app.post("/api/projects", response_model=Project, status_code=202)
 async def create_project(req: ProjectRequest):
+    config_errors = [] if settings.is_demo else settings.production_errors()
+    if config_errors:
+        raise HTTPException(503, "Cấu hình production chưa hoàn tất: " + "; ".join(config_errors))
     project = Project(
         id=uuid.uuid4().hex[:12],
         status="queued",
@@ -50,6 +58,18 @@ async def create_project(req: ProjectRequest):
 @app.get("/api/projects", response_model=list[Project])
 def list_projects():
     return store.list()
+
+
+@app.get("/api/config")
+def get_config():
+    return {
+        "app_mode": settings.app_mode,
+        "openai_model": settings.openai_model,
+        "tts_provider": settings.tts_provider,
+        "visual_provider": settings.visual_provider,
+        "ready": settings.is_demo or not settings.production_errors(),
+        "errors": [] if settings.is_demo else settings.production_errors(),
+    }
 
 
 @app.get("/api/projects/{project_id}", response_model=Project)

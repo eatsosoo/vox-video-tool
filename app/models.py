@@ -1,5 +1,5 @@
-from enum import Enum
 from datetime import datetime
+from enum import Enum
 from pydantic import BaseModel, Field
 
 
@@ -13,12 +13,16 @@ class SceneType(str, Enum):
 
 class Scene(BaseModel):
     id: int
-    duration: float = Field(ge=2, le=12)
+    duration: float = Field(ge=1, le=60)
     narration: str
     scene_type: SceneType
     visual_prompt: str
     title: str = ""
     subtitle: str = ""
+    overlay_text: str = ""
+    source_query: str = ""
+    transition: str = "fade"
+    camera_motion: str = "slow_zoom_in"
 
 
 class ProjectRequest(BaseModel):
